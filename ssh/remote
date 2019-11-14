@@ -1,0 +1,177 @@
+#!/usr/bin/env python3
+
+# Environment variables:
+
+# user - remote directory login username
+# host - ssh HOST URL
+# key_path - location for the .pem file
+# verbose - displays command before running them
+# cwd - absolute path for the working directory
+# port - ssh port to login in
+
+from __future__ import print_function
+
+import sys
+import yaml
+import subprocess
+import os.path
+
+# How to Use
+how_to_use = [  "How to Use remote \n",
+                "login            login to remote machine",
+                "run    cmd       run specified cmd remote machine",
+                "push   file      scp the file from local to remote",
+                "pull   file      scp the file from remote to local",
+                "cat              display remoterc config",
+                "help             display help",
+                "set    arg val   set the config variable to val",
+                "       arg can take following values: ",
+                "                 user           remote login name",
+                "                 url            remote host url",
+                "                 key_path       path to ssh key",
+                "                 cwd            working dir in remote",
+                "                 verbose        set verbose true/false"]
+
+config = {}
+
+############ load config
+
+def load_config():
+
+    try:
+
+        if not os.path.exists('.remoterc'):
+            print("no .remoterc file found at location " + os.getcwd())
+            print("use remote init to initialise ")
+            exit(0)
+
+        config_file = open('.remoterc','r')
+
+        return yaml.load(config_file, Loader=yaml.BaseLoader)
+
+    except yaml.YAMLError as exc:
+
+        # error parsing .remoterc file
+        print(exc)
+        exit(0)
+
+    except IOError:
+
+        if sys.argv[1] == 'set':
+
+            config = {'user':None,'url':None,'key_path':None,'verbose':False}
+
+            # edits the remoterc file 
+            config[sys.argv[2]] = sys.argv[3]
+
+            with open('.remoterc','w') as config_file:
+                yaml.dump(config, config_file, default_flow_style=False)
+
+            exit(0)
+
+        print("No .remoterc file specified")
+        exit(0)
+
+
+if len(sys.argv) == 2 and sys.argv[1] == 'init':
+    with open(os.getcwd()+"/.remoterc",'w') as rcfile:
+        print("created an new .remoterc file")
+        usr = str( input('remote user: ') )
+        key = str( input('.pem key path for ssh login ( ~/.ssh/<key>.pem ): '))
+        host = str( input('remote host url: ') )
+        cwd = str( input('remote working directory: ') )
+
+        print(usr,key,host,cwd)
+
+        exit(0)
+
+config = load_config()
+
+# create host url
+host = str(config['user'])+"@"+str(config['url'])
+
+# on case of failure to pass any parameter
+# it echos how_to_use message
+command = ["echo", how_to_use ]
+
+
+if len(sys.argv) == 1:
+    # failure to give any option
+    # result in execution of 
+    # default command
+    pass
+
+elif sys.argv[1] == 'set':
+
+    # edits the remoterc file
+    val = sys.argv[3]
+
+    if val == 'True' or val == 'true':val = True
+    elif val == 'False' or val == 'false':val = False
+     
+    config[sys.argv[2]] = val
+
+    with open('.remoterc','w') as config_file:
+        
+        yaml.dump(config, config_file, default_flow_style=False)
+
+    exit(0)
+
+elif config['key_path'] == None:
+
+    print("key_path missing from .remoterc")
+    print("please add it using set key_path")
+    exit(0)
+
+elif sys.argv[1] == 'cat':
+
+    with open('.remoterc','r') as rc_file:
+        for line in rc_file:
+            print(line)
+
+elif sys.argv[1] == 'login':
+
+    if not config['cwd'] == None:
+        command =  [ "ssh", "-i" ,str(config['key_path']),"-t" ,host, "cd" ,str(config["cwd"]),";","bash;"]
+    else:
+        print("cwd is missing from .remoterc")
+        print("please add it using set cwd")
+
+elif sys.argv[1] == 'shell':
+
+    command =  [ "ssh", "-i" ,str(config['key_path']), host ] + ['cd',config['cwd']+";"]  + sys.argv[2:]
+
+elif sys.argv[1] == 'push':
+
+    if not config['cwd'] == None:
+        host = host + ":" + str(config['cwd']) + "/" + sys.argv[2]
+        command = ["scp","-i",str(config['key_path']),sys.argv[2]] + [host]
+        
+    else:
+        print("cwd is missing from .remoterc")
+        print("please add it using set cwd")
+
+elif sys.argv[1] == 'pull':
+
+    if not config['cwd'] == None:
+        host = host + ":" + str(config['cwd']) + "/" + sys.argv[2]
+        output_file = sys.argv[3] if (len(sys.argv) > 3) else sys.argv[2] 
+        command = ["scp","-i",str(config['key_path']) ] + [ host,output_file ]
+        
+    else:
+        print("cwd is missing from .remoterc")
+        print("please add it using set cwd")
+
+try:
+
+    if config['verbose']:
+        print(" ".join(command))
+
+    subprocess.call(command)
+except KeyError as exc:
+    print("some key not found")
+
+
+def main():
+    if __name__ == "__main__":
+        main()

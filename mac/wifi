@@ -1,0 +1,27 @@
+# commandland wifi
+# some basic operations wifi operations from the cmd
+
+alias airport=/System/Library/PrivateFrameworks/Apple80211.framework/Resources/airport 
+
+function mywifi(){
+    airport -I | awk -F: '/ SSID/{print $2}'
+}
+
+function list(){
+    airport -s 
+}
+
+function restart(){
+    networksetup -setairportpower airport off; networksetup -setairportpower airport on
+}
+
+function disconnect(){
+
+    /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport "XYZ" -z
+}
+
+if [ "$#" -eq 0 ]; then
+    mywifi
+else
+    $1
+fi
