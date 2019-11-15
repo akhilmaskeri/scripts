@@ -1,7 +1,18 @@
 # commandland wifi
-# some basic operations wifi operations from the cmd
+# some wrap over airport and networksetup
+# to make even less mouse-move 
 
 alias airport=/System/Library/PrivateFrameworks/Apple80211.framework/Resources/airport 
+
+function h(){
+    echo "gives you your connected wifi"
+    echo "list       -- scan for wifi"
+    echo "connect    -- connect to <wifi_name>"
+    echo "disconnect -- disconnects the current wifi"
+    echo "restart    -- restart the wifi module"
+    echo "kill       -- turns off wifl"
+    echo "start      -- turns on wifi"
+}
 
 function mywifi(){
     airport -I | awk -F: '/ SSID/{print $2}'
@@ -16,12 +27,18 @@ function restart(){
 }
 
 function disconnect(){
+    currentWifi=`mywifi`
+    sudo /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport $currentWifi -z
+    echo $currentWifi "disconnected"
+}
 
-    /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport "XYZ" -z
+function connect(){
+    psswd=`security find-generic-password -ga "$1" -w`
+    networksetup -setairportnetwork en0 $1 $psswd
 }
 
 if [ "$#" -eq 0 ]; then
     mywifi
 else
-    $1
+    $@
 fi

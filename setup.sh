@@ -1,3 +1,5 @@
+# commandland setup
+
 if [ "$(uname)" == "Darwin" ]; then
 
 	# install xcode
