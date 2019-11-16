@@ -15,6 +15,8 @@ if [ "$(uname)" == "Darwin" ]; then
 	brew install caskroom/cask/brew-cask
     brew install iterm2
 
+    brew install blueutil
+
 fi
 
 # oh my zsh
