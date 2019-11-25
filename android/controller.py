@@ -1,6 +1,5 @@
 """
 
-
 	Androd device controller based on adb
 	The keys have to be mapped manually
 	Please refer the constants to get the key
@@ -16,11 +15,10 @@
 
 """
 
-import tty
-import sys
-import termios
 import subprocess
 import threading
+
+from getkey import getkey, keys
 
 from enum import Enum
 
@@ -39,6 +37,7 @@ class ANDROID(Enum):
 	KEYCODE_ENTER = 66
 	KEYCODE_HOME = 3
 	KEYCODE_SEARCH = 84
+	KEYCODE_CLEAR = 28
 
 	KEYCODE_MEDIA_PLAY_PAUSE = 85
 	KEYCODE_VOLUME_DOWN = 25
@@ -48,49 +47,59 @@ class ANDROID(Enum):
 	KEYCODE_SLEEP = 223
 	KEYCODE_WAKEUP = 224
 
+class ACTION_METHOD():
+
+	@staticmethod
+	def swipe_down():
+
+		command = [ADB_PATH, "shell", "input", "swipe" ] + "200 0 200 500 100".split(" ")
+		adb.call(command)
+		
+
+	@staticmethod
+	def swipe_up():
+
+		command = [ADB_PATH, "shell", "input", "swipe" ] + "200 500 200 0 100".split(" ")
+		adb.call(command)
 
 
 class KeyBoard():
 
 	# command mode key map
 	KEY_MAP = {
-
-		ord('h')  : ANDROID.KEYCODE_DPAD_LEFT,
-		ord('l')  : ANDROID.KEYCODE_DPAD_RIGHT,
-		ord('j')  : ANDROID.KEYCODE_DPAD_DOWN,
-		ord('k')  : ANDROID.KEYCODE_DPAD_UP,
-		ord('\r') : ANDROID.KEYCODE_ENTER,
-		127       : ANDROID.KEYCODE_BACK,     # backspace to back
-		ord('H')  : ANDROID.KEYCODE_HOME,
-		ord('S')  : ANDROID.KEYCODE_SEARCH,
-		ord(' ')  : ANDROID.KEYCODE_MEDIA_PLAY_PAUSE,
-		ord('-')  : ANDROID.KEYCODE_VOLUME_DOWN,
-		ord('=')  : ANDROID.KEYCODE_VOLUME_UP,
-		ord(')')  : ANDROID.KEYCODE_VOLUME_MUTE,
+		keys.H  : ANDROID.KEYCODE_DPAD_LEFT,
+		keys.L  : ANDROID.KEYCODE_DPAD_RIGHT,
+		keys.J  : ANDROID.KEYCODE_DPAD_DOWN,
+		keys.K  : ANDROID.KEYCODE_DPAD_UP,
+		keys.ENTER : ANDROID.KEYCODE_ENTER,
+		keys.BACKSPACE : ANDROID.KEYCODE_BACK,               # backspace to back
+		keys.SHIFT_H  : ANDROID.KEYCODE_HOME,
+		keys.SHIFT_S  : ANDROID.KEYCODE_SEARCH,
+		keys.SPACE  : ANDROID.KEYCODE_MEDIA_PLAY_PAUSE,
+		keys.MINUS  : ANDROID.KEYCODE_VOLUME_DOWN,
+		keys.EQUALS  : ANDROID.KEYCODE_VOLUME_UP,
+		keys.CLOSE_PAREN  : ANDROID.KEYCODE_VOLUME_MUTE,
+		keys.SHIFT_C  : ANDROID.KEYCODE_CLEAR,
+		keys.DOWN : ACTION_METHOD.swipe_down,
+		keys.UP : ACTION_METHOD.swipe_up,
 	}
-
 
 	@staticmethod
 	def getch():
 		""" detect key press """
-
-		fd = sys.stdin.fileno()
-		old_settings = termios.tcgetattr(fd)
-
-		tty.setraw(sys.stdin.fileno())
-		ch = sys.stdin.read(1)
-
-		termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-
-		return ch
+		return getkey()
 
 	@staticmethod
 	def getKeyEvent(key):
-		return KeyBoard.KEY_MAP[ord(key)]
+		return KeyBoard.KEY_MAP[key]
 
 
 class adb():
 	""" provides adb shell object """
+
+	@staticmethod
+	def call(command):
+		subprocess.call(command)		
 
 	@staticmethod
 	def communicate(*command):
@@ -98,9 +107,14 @@ class adb():
 
 	@staticmethod
 	def input_keyevent(key_code):
-		command = [ ADB_PATH, "shell", "input", "keyevent" ,str(key_code)]
-		executionThread = threading.Thread(target=adb.communicate, args=(command) )
-		executionThread.start()
+
+		if type(key_code) is ANDROID:
+			command = [ ADB_PATH, "shell", "input", "keyevent" ,str(key_code.value)]
+			executionThread = threading.Thread(target=adb.communicate, args=(command) )
+			executionThread.start()
+
+		else:
+			key_code()
 
 	@staticmethod
 	def input_text(text):
@@ -116,32 +130,97 @@ class adb():
 
 		adb.input_keyevent(ANDROID.KEYCODE_ENTER.value)
 
+	@staticmethod
+	def execute_command(command):
 
-def navigate():
+		command = command.split(' ')
 
-	print(f"press CTRL+C to exit")
+		if command[0] == "ls" or  command[0] == "list":
+			adb.list_packages()
+		elif command[0] == 's' or command[0] == "search":
+			adb.search_package(command[1])
+		elif command[0] == 'a' or command[0] == "open":
+			adb.open_app(command[1])
+		else:
+			print(command, "no such command found")
+
+	@staticmethod
+	def list_packages():
+
+		command = [ ADB_PATH, "shell", "pm" , "list", "packages", "-f", "|", "awk", "-F=", "'{print $NF}'"] 
+
+		process = subprocess.Popen(command, stdout=subprocess.PIPE)
+		out = process.communicate()[0]
+
+		print(out.decode('utf-8'))
+
+	@staticmethod
+	def search_package(search_str):
+
+		command = [ ADB_PATH, "shell", "pm" , "list", "packages", "-f", "|", "awk", "-F=", "'{print $NF}'"] 
+
+		process = subprocess.Popen(command, stdout=subprocess.PIPE)
+		out = process.communicate()[0].decode('utf-8')
+
+		print(f"searching {search_str}")
+
+		for pkg in out.split('\n'):
+			if search_str in pkg:
+				print(pkg)
+
+	@staticmethod
+	def open_app(search_str):
+
+		command = [ ADB_PATH, "shell", "pm" , "list", "packages", "-f", "|", "awk", "-F=", "'{print $NF}'"] 
+
+		process = subprocess.Popen(command, stdout=subprocess.PIPE)
+		out = process.communicate()[0].decode('utf-8')
+
+		print(f"searching {search_str}")
+
+		for pkg in out.split('\n'):
+			if search_str in pkg:
+				command = [ ADB_PATH, "shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1" ]
+				process = subprocess.Popen(command, stdout=subprocess.PIPE)
+				process.communicate()[0].decode('utf-8')
+
+def navigate(key):
+
+	try:
+		key_code = KeyBoard.getKeyEvent(key)
+		print(f"pressed {keys.name(key)} mapped to {key_code}")
+		adb.input_keyevent(key_code)
+
+	except Exception:
+		print(f"pressed {key}:{ord(key)} but its not mapped")
+
+
+def main():
+
+	print("press CTRL_C to quit")
 
 	while True:
 
-		key = KeyBoard.getch()
+		try:
 
-		if ord(key) == 3:
+			k = KeyBoard.getch()
+
+
+			if k == keys.ESC:
+				text = str(input("[ str ] "))
+				adb.input_text(text)
+
+			elif k == keys.COLON:
+				command = str(input("[ cmd ] "))
+				adb.execute_command(command)
+
+			else:
+				print("[ nav ]", end=" ")
+				navigate(k)
+
+		except KeyboardInterrupt:
 			print("gracefull exiting CTRL+C")
-			break
-
-		elif ord(key) == 27:
-			text = str(input("[ str ] "))
-			adb.input_text(text)
-
-		else:
-
-			try:
-				key_code = KeyBoard.getKeyEvent(key)
-				print(f"[cmd] pressed {key} mapped to {key_code}")
-				adb.input_keyevent(key_code.value)
-
-			except Exception:
-				print(f"[cmd] pressed {key}:{ord(key)} but its not mapped")
+			exit(0)
 
 if __name__ == "__main__":
-	navigate()
+	main()
