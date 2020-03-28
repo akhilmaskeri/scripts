@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# https://gist.github.com/thomasfinch/14bd3181799734c872d2ad3b207cc01c
+
+plistLoc="/private/var/root/Library/Preferences/com.apple.CoreBrightness.plist"
+
+currentUserUID=$(dscl . -read /Users/$(whoami)/ GeneratedUID) # Get the GeneratedUID for the current user
+currentUserUID=$(echo $currentUserUID | cut -d' ' -f2) # Remove the "GeneratedUID: " part
+currentUserUID="CBUser-"$currentUserUID # Append the prefix
+
+# Enable settings
+algoOverride=4
+enabled=1
+
+if [[ $1 == "-d" ]]; then
+	# Disable settings
+	algoOverride=3
+	enabled=0
+fi
+
+# Change the settings directly in the core brightness plist (defaults doesn't deal with nested data structures well)
+sudo /usr/libexec/PlistBuddy -c "Set :$currentUserUID:CBBlueReductionStatus:BlueLightReductionAlgoOverride $algoOverride" $plistLoc
+sudo /usr/libexec/PlistBuddy -c "Set :$currentUserUID:CBBlueReductionStatus:BlueReductionEnabled $enabled" $plistLoc
+
+sudo killall cfprefsd
+sudo killall corebrightnessd
