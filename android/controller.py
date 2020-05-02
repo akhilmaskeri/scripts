@@ -23,7 +23,7 @@ from getkey import getkey, keys
 from enum import Enum
 
 # change to your adb location
-ADB_PATH="/Users/hokusai/Library/Android/sdk/platform-tools/adb"
+ADB_PATH="/Users/akhil/Library/Android/sdk/platform-tools/adb"
 
 class ANDROID(Enum):
 
@@ -46,6 +46,10 @@ class ANDROID(Enum):
 
 	KEYCODE_SLEEP = 223
 	KEYCODE_WAKEUP = 224
+	KEYCODE_BUTTON_A = 96
+	KEYCODE_BUTTON_B = 97
+	KEYCODE_BUTTON_X = 99
+	KEYCODE_BUTTON_Y = 100
 
 class ACTION_METHOD():
 
@@ -80,8 +84,12 @@ class KeyBoard():
 		keys.EQUALS  : ANDROID.KEYCODE_VOLUME_UP,
 		keys.CLOSE_PAREN  : ANDROID.KEYCODE_VOLUME_MUTE,
 		keys.SHIFT_C  : ANDROID.KEYCODE_CLEAR,
+		keys.A : ANDROID.KEYCODE_BUTTON_A,
+		keys.X : ANDROID.KEYCODE_BUTTON_X,
+		keys.B : ANDROID.KEYCODE_BUTTON_B,
+		keys.Y : ANDROID.KEYCODE_BUTTON_Y,
 		keys.DOWN : ACTION_METHOD.swipe_down,
-		keys.UP : ACTION_METHOD.swipe_up,
+		keys.UP : ACTION_METHOD.swipe_up
 	}
 
 	@staticmethod

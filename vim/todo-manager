@@ -1,0 +1,25 @@
+" todo plugin and syntax highlighting
+
+nnoremap <leader>et :vsplit ~/.todo<cr>
+
+function! s:todoinit()
+
+    highlight compleated ctermfg=green "ctermbg=black
+    highlight pending ctermfg=red "ctermbg=black
+    highlight started ctermfg=yellow "ctermbg=black
+
+    call matchadd('compleated', '\~.*$', 100)
+    call matchadd('pending', '^\(\s*\)-.*$', 100)
+    call matchadd('started', '>.*$', 100)
+
+    " https://vim.fandom.com/wiki/Insert_current_date_or_time
+    nnoremap <leader>n :pu=strftime('%b %d, %H:%M')<cr><esc>^i-<space><esc>$a<space>
+
+    nnoremap <leader>f ^r~<esc>
+    nnoremap <leader>d ^r-<esc>
+    nnoremap <leader>, ^r><esc>
+
+endfunction
+
+autocmd BufRead * if expand('%:t') == ".todo" | call s:todoinit() | endif
+
